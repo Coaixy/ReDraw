@@ -1,0 +1,163 @@
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Draw</title>
+  <link rel="stylesheet" href="https://unpkg.com/mdui@1.0.2/dist/css/mdui.min.css" />
+  <style>
+    .canvas {
+      border: 1px solid #ccc;
+      cursor: crosshair;
+    }
+  </style>
+</head>
+
+<body style="text-align: center;" class="mdui-theme-primary-teal mdui-bottom-nav-fixed">
+  <input type="button" value="创建" id="btn1" class="mdui-btn">
+  <input type="button" value="清空" id="btn2" class="mdui-btn">
+  <br><br>
+  <canvas id="cvs" class="canvas" width="600" height="500"></canvas>
+  <div class="mdui-bottom-nav mdui-bottom-nav-text-auto">
+    <a href="index.html" class="mdui-ripple">
+      <i class="mdui-icon material-icons">live_tv</i>
+      <label>播放</label>
+    </a>
+    <a href="create.html" class="mdui-ripple mdui-bottom-nav-active">
+      <i class="mdui-icon material-icons">library_books</i>
+      <label>创建</label>
+    </a>
+  </div>
+
+  <script>
+    function getQueryString(name) {
+      let reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+      let r = window.location.search.substr(1).match(reg);
+      if (r != null) {
+        return decodeURIComponent(r[2]);
+      };
+      return null;
+    }
+    class Draw {
+      constructor(selector, width, height) {
+        this.element = document.querySelector(selector)
+        this.canvas = this.element.getContext('2d')
+        this.element.width = width
+        this.element.height = height
+        this.timeId = null
+        this.animateArr = []
+      }
+      init() {
+        const { canvas: c, element: el } = this
+        let isDrag = false
+
+        c.lineWidth = 2
+        c.lineJoin = 'round'
+        c.shadowColor = '#000'
+        c.shadowBlur = 4
+
+        el.onmousedown = () => {
+          isDrag = true
+          c.beginPath()
+        }
+        el.onmousemove = (e) => {
+          if (isDrag) {
+            const x = e.pageX - el.offsetLeft
+            const y = e.pageY - el.offsetTop
+            c.lineTo(x, y)
+            c.stroke()
+            this.animateArr.push([x, y])
+          }
+        }
+        el.onmouseup = () => {
+          isDrag = false
+          this.animateArr.push(-1)
+        }
+        el.onmouseout = () => {
+          el.onmouseup()
+        }
+      }
+      animateGo() {
+        const { canvas: c } = this
+        this.clear()
+        c.beginPath()
+        const loop = (animate, i) => {
+          if (i < animate.length - 1) {
+            const arr = animate[i]
+            if (arr === -1) {
+              c.beginPath()
+            } else {
+              c.lineTo(arr[0], arr[1])
+              c.stroke()
+            }
+            i++
+            this.timeId = setTimeout(() => {
+              loop(animate, i)
+            }, 10)
+          }
+        }
+        loop(this.animateArr, 0)
+      }
+      clear() {
+        const { canvas: c } = this
+        const { width, height } = this.element
+        c.clearRect(0, 0, width, height)
+      }
+    }
+    const g = new Draw('#cvs', 600, 500)
+    g.init()
+    document.getElementById('btn1').onclick = () => {
+      let res = ""
+      g.animateArr.forEach(element => {
+        res += element.toString() + "~"
+      });
+      console.log(res)
+      copyToClip(window.location.origin+"?arr="+res)
+
+    }
+    document.getElementById('btn2').onclick = () => {
+      g.clear()
+      g.animateArr = []
+    }
+
+    /**
+     * 复制单行内容到粘贴板
+     * content : 需要复制的内容
+     * message : 复制完后的提示，不传则默认提示"复制成功"
+     */
+    function copyToClip(content, message) {
+      var aux = document.createElement("input");
+      aux.setAttribute("value", content);
+      document.body.appendChild(aux);
+      aux.select();
+      document.execCommand("copy");
+      document.body.removeChild(aux);
+      if (message == null) {
+        alert("复制成功");
+      } else {
+        alert(message);
+      }
+    }
+
+    function str2arr() {
+      let res = Array()
+      str = getQueryString("arr")
+      // console.log(str)
+      let tmp = str.split("~")
+      tmp.forEach(element => {
+        if (element != "") {
+          if (element.indexOf(",") > -1) {
+            let temp = element.split(",")
+            res.push([temp[0], temp[1]])
+          } else {
+            res.push(element)
+          }
+        }
+      });
+      // console.log(res)
+      return res
+    }
+  </script>
+  <script src="https://unpkg.com/mdui@1.0.2/dist/js/mdui.min.js"></script>
+</body>
+
+</html>
